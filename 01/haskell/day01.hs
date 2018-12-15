@@ -22,5 +22,7 @@ main = do
     args <- getArgs
     contents <- readFile $ args !! 0
     numbers <- traverse readInt $ lines contents
-    let partials = partialSums $ cycle numbers
-    print $ reachedTwice partials
+    putStr "Part 1: "
+    print $ sum numbers
+    putStr "Part 2: "
+    print $ reachedTwice $ partialSums $ cycle numbers
