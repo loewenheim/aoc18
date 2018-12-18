@@ -1,0 +1,8 @@
+[package]
+name = "aoc18_04"
+version = "0.1.0"
+authors = ["Sebastian Zivota <sebastian.zivota@mailbox.org>"]
+edition = "2018"
+
+[dependencies]
+nom = "4.0.0"
