@@ -1,5 +1,5 @@
-use nom::types::CompleteStr;
-use nom::*;
+use lazy_static::*;
+use regex::Regex;
 use std::collections::HashMap;
 use std::env::args;
 use std::fs::File;
@@ -12,7 +12,6 @@ struct Timestamp {
     hour: u16,
     minute: u16,
 }
-
 
 #[derive(Debug)]
 enum Event {
@@ -48,7 +47,11 @@ fn to_naps(log: &[LogEntry]) -> Vec<Nap> {
         match le.event {
             Event::BeginsShift(g) => guard = g,
             Event::FallsAsleep => start = le.timestamp.minute,
-            Event::WakesUp => naps.push(Nap {guard, start, end: le.timestamp.minute}),
+            Event::WakesUp => naps.push(Nap {
+                guard,
+                start,
+                end: le.timestamp.minute,
+            }),
         }
     }
 
@@ -77,8 +80,8 @@ fn main() {
     let stats_by_guard: HashMap<u16, NapStats> = {
         let mut log: Vec<LogEntry> = br
             .lines()
-            .map(|l| l.unwrap())
-            .map(|l| log_entry(CompleteStr(&l)).unwrap().1)
+            .map(|line| line.unwrap())
+            .map(|line| parse_log_entry(&line).unwrap())
             .collect();
 
         log.sort_by_key(|le| le.timestamp);
@@ -87,7 +90,7 @@ fn main() {
 
         let mut naps_by_guard = HashMap::new();
 
-        for Nap { guard, start, end} in naps {
+        for Nap { guard, start, end } in naps {
             naps_by_guard
                 .entry(guard)
                 .or_insert(Vec::new())
@@ -99,74 +102,44 @@ fn main() {
             .collect()
     };
 
-    let (g, NapStats { most, .. }) = stats_by_guard
-        .iter()
-        .max_by_key(|t| (t.1).total)
-        .unwrap();
+    let (&g, &NapStats { most, .. }) = stats_by_guard.iter().max_by_key(|(_, s)| s.total).unwrap();
 
-    println!("Part 1: {}", (*g as u32) * (*most as u32));
+    println!("Part 1: {}", (g as u32) * (most as u32));
 
-    let (g, NapStats { most, .. }) = stats_by_guard
-        .iter()
-        .max_by_key(|t| (t.1).count)
-        .unwrap();
+    let (&g, &NapStats { most, .. }) = stats_by_guard.iter().max_by_key(|(_, s)| s.count).unwrap();
 
-    println!("Part 2: {}", (*g as u32) * (*most as u32));
+    println!("Part 2: {}", (g as u32) * (most as u32));
 }
 
+// Parsing
 
-// Parsers
-named! {
-    number<CompleteStr, u16>,
-    map_res!(take_while!(|c: char| c.is_digit(10)), |s: CompleteStr| s.0.parse())
+fn parse_log_entry(input: &str) -> Result<LogEntry, String> {
+    lazy_static! {
+        static ref TS: Regex = Regex::new(r"^\[\d{4}-(\d{2})-(\d{2}) (\d{2}):(\d{2})\]").unwrap();
+        static ref EV: Regex =
+            Regex::new(r" (Guard #(\d+) begins shift|falls asleep|wakes up)$").unwrap();
+    }
+
+    if let Some(cap) = TS.captures_iter(input).next() {
+        let timestamp = Timestamp {
+            month: cap[1].parse().unwrap(),
+            day: cap[2].parse().unwrap(),
+            hour: cap[3].parse().unwrap(),
+            minute: cap[4].parse().unwrap(),
+        };
+
+        if let Some(cap) = EV.captures_iter(input).next() {
+            let event = match &cap[1] {
+                "falls asleep" => Event::FallsAsleep,
+                "wakes up" => Event::WakesUp,
+                _ => Event::BeginsShift(cap[2].parse().unwrap()),
+            };
+
+            Ok(LogEntry { timestamp, event })
+        } else {
+            Err(format!("Failed to parse event: {}", input))
+        }
+    } else {
+        Err(format!("Failed to parse timestamp: {}", input))
+    }
 }
-
-named! {
-    timestamp<CompleteStr, Timestamp>,
-    do_parse!(
-        number >>
-        tag!("-") >>
-        month: number >>
-        tag!("-") >>
-        day: number >>
-        tag!(" ") >>
-        hour: number >>
-        tag!(":") >>
-        minute: number >>
-        (Timestamp { month, day, hour, minute })
-    )
-}
-
-named! {
-    falls_asleep<CompleteStr, Event>,
-    value!(Event::FallsAsleep, tag!("falls asleep"))
-}
-
-named! {
-    wakes_up<CompleteStr, Event>,
-    value!(Event::WakesUp, tag!("wakes up"))
-}
-
-named! {
-    begins_shift<CompleteStr, Event>,
-    map!(delimited!(
-        tag!("Guard #"),
-        number,
-        tag!(" begins shift")),
-        Event::BeginsShift)
-}
-
-named! {
-    event<CompleteStr, Event>,
-    alt!(begins_shift | wakes_up | falls_asleep)
-}
-
-named! {
-    log_entry<CompleteStr, LogEntry>,
-    do_parse!(
-        timestamp: delimited!(tag!("["), timestamp, tag!("] ")) >>
-        event: event >>
-        (LogEntry { event, timestamp })
-    )
-}
-
