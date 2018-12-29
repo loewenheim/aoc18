@@ -1,11 +1,17 @@
 use lazy_static::*;
+use re_parse::*;
 use regex::Regex;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::env::args;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Copy, Clone)]
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Deserialize, ReParse)]
+#[re_parse(regex = r#"(?x)
+          \d{4}-(?P<month>\d{2})-(?P<day>\d{2})\s
+          (?P<hour>\d{2}):(?P<minute>\d{2})
+ "#)]
 struct Timestamp {
     month: u16,
     day: u16,
@@ -13,6 +19,11 @@ struct Timestamp {
     minute: u16,
 }
 
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Deserialize, ReParse)]
+#[re_parse(regex = r#"\[(?P<ts>[^]]*)\] foo"#)]
+struct TimestampWrapper {
+    ts: Timestamp,
+}
 #[derive(Debug)]
 enum Event {
     BeginsShift(u16),
@@ -73,6 +84,7 @@ fn stats(naps: &[(u16, u16)]) -> NapStats {
 }
 
 fn main() {
+
     let filename = args().nth(1).expect("Expected file name");
 
     let br = BufReader::new(File::open(filename).unwrap());

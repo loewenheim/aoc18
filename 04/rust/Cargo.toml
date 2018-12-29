@@ -6,4 +6,9 @@ edition = "2018"
 
 [dependencies]
 regex = "1"
+re-parse = "0.1.0"
 lazy_static = "1.2.0"
+
+[dependencies.serde]
+version = "1.0.82"
+features = ["derive"]
