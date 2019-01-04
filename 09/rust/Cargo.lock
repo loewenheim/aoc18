@@ -1,0 +1,14 @@
+[[package]]
+name = "aoc18_09"
+version = "0.1.0"
+dependencies = [
+ "ring_queue 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "ring_queue"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum ring_queue 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b2d692afc70688e5905d7b533d840d0e33c859135fac54e0e840cc43ab5e4395"

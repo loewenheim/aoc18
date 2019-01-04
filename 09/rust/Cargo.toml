@@ -1,0 +1,8 @@
+[package]
+name = "aoc18_09"
+version = "0.1.0"
+authors = ["Sebastian Zivota <sebastian.zivota@mailbox.org>"]
+edition = "2018"
+
+[dependencies]
+ring_queue = "0.2.0"
